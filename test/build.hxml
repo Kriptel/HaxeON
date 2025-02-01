@@ -1,6 +1,6 @@
 --cwd ./test
 
--lib hxon
+-lib haxeon
 
 -cp src
 
