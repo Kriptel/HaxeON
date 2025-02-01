@@ -1,0 +1,10 @@
+{
+  "name": "hxon",
+  "url" : "https://github.com/Kriptel/HaxeON",
+  "license": "MIT",
+  "description": "Haxe Object Notation",
+  "version": "0.0.1",
+  "releasenote": "",
+  "dependencies": {},
+  "contributors": ["Kriptel"]
+}
