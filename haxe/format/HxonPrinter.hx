@@ -96,7 +96,7 @@ class HxonPrinter
 					for (key => value in map)
 					{
 						addTabs(1);
-						s += key;
+						s += isIdent(key) ? key : '"$key"';
 
 						if (value is StringMap)
 							s += '[]';
