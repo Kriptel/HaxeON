@@ -3,7 +3,7 @@
   "url" : "https://github.com/Kriptel/HaxeON",
   "license": "MIT",
   "description": "Haxe Object Notation",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "releasenote": "",
   "dependencies": {},
   "contributors": ["Kriptel"]

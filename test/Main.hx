@@ -6,5 +6,9 @@ import sys.io.File;
 
 function main()
 {
-	Sys.print(Json.stringify(Hxon.parse(File.getContent('test.hxon')), '  '));
+	var obj:Dynamic = {
+		test: {a: 123}
+	}
+
+	Sys.println(Json.stringify(Hxon.parse(File.getContent('test.hxon'), obj), '  '));
 }

@@ -1,7 +1,8 @@
 {
-	a: 1
+	a: 1,
 	"b": 1.1
-	c: true
+	c: true,
+	d: *context.test.a
 	array: [1,2,3]
 	struct {
 		a: 1
@@ -9,7 +10,8 @@
 	}
 	map[]: {
 		a: null
-		b: 1
+		b: 1,
 		c: true
+		d: **context.test.a
 	}
 }

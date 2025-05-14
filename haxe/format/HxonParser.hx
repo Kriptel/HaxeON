@@ -1,5 +1,7 @@
 package haxe.format;
 
+import haxe.format.HxonTypes.ContextValue;
+
 using StringTools;
 
 private enum Token
@@ -12,9 +14,11 @@ private enum Token
 	TStructClose; // }
 	TTableOpen; // [
 	TTableClose; // ]
-	TDoubleDot; // :
+	TDot; // .
 	TComma; // ,
+	TDoubleDot; // :
 	TMinus; // -
+	TAsterisk; // *
 	TEof;
 }
 
@@ -30,37 +34,42 @@ class HxonParser
 
 	var input:String;
 	var pos:Int = 0;
+	var _context:Dynamic;
 
-	public function parse(s:String):Dynamic
+	public function parse(s:String, ?context:Dynamic):Dynamic
 	{
 		this.input = s;
 		this.pos = 0;
+		this._context = context;
 
-		switch (token())
+		final value:Dynamic = switch (token())
 		{
 			case TStructOpen:
-				return parseStruct();
+				parseStruct();
 			case TTableOpen:
 				var tk = token();
+
 				if (tk == TTableClose)
 				{
 					switch (token())
 					{
 						case TStructOpen:
-							return parseMap();
+							parseMap();
 						case TEof:
-							return [];
+							[];
 						case tk:
-							trace(tk);
+							unexpected(tk);
 					}
 				}
-
-				return parseArray();
+				else
+					parseArray();
 			case tk:
 				unexpected(tk);
 		}
 
-		return null;
+		this._context = null;
+
+		return value;
 	}
 
 	function parseStruct():Dynamic
@@ -99,6 +108,8 @@ class HxonParser
 				case tk:
 					unexpected(tk);
 			}
+
+			maybe(TComma);
 		}
 
 		return struct;
@@ -164,6 +175,8 @@ class HxonParser
 				case tk:
 					unexpected(tk);
 			}
+
+			maybe(TComma);
 		}
 
 		return map;
@@ -198,12 +211,42 @@ class HxonParser
 				parseStruct();
 			case TMinus:
 				-getValue();
+			case TAsterisk:
+				final isAbstract:Bool = maybe(TAsterisk);
+
+				ensure(TIdent('context'));
+				var valuePath:Array<String> = [];
+
+				while (true)
+				{
+					if (maybe(TDot))
+					{
+						valuePath.push(switch (token())
+						{
+							case TIdent(id): id;
+							case tk: unexpected(tk);
+						});
+					}
+					else
+						break;
+				}
+
+				var value:Dynamic = _context;
+				for (field in valuePath)
+				{
+					value = Reflect.getProperty(value, field);
+				}
+
+				return if (isAbstract)
+					value
+				else
+					new ContextValue(valuePath, value);
 			case tk:
 				throw unexpected(tk);
 		}
 	}
 
-	inline function unexpected(tk:Token)
+	inline function unexpected(tk:Token):Dynamic
 	{
 		throw 'unexpected $tk at line $line ("${input.substring(pos - 5, pos + 5)}")';
 	}
@@ -281,25 +324,34 @@ class HxonParser
 
 					return TInt(n);
 				case '.'.code:
-					var n:Float = 0.;
-
-					var i:Float = 1.;
-
-					while (true)
+					final char:Int = readChar();
+					switch (char)
 					{
-						var char = readChar();
-						switch (char)
-						{
-							case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
-								i *= 10;
-								n = n + (char - 48) / i;
-							default:
-								this.char = char;
-								break;
-						}
+						case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
+							var n:Float = char - 48;
+
+							var i:Float = 1.;
+
+							while (true)
+							{
+								var char = readChar();
+								switch (char)
+								{
+									case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
+										i *= 10;
+										n = n + (char - 48) / i;
+									default:
+										this.char = char;
+										break;
+								}
+							}
+
+							return TFloat(n);
+						default:
+							this.char = char;
+							return TDot;
 					}
 
-					return TFloat(n);
 				case '{'.code:
 					return TStructOpen;
 				case '}'.code:
@@ -316,6 +368,8 @@ class HxonParser
 					return TComma;
 				case "-".code:
 					return TMinus;
+				case "*".code:
+					return TAsterisk;
 				case _ if (StringTools.isEof(char)):
 					return TEof;
 				default:
@@ -359,9 +413,21 @@ class HxonParser
 
 	inline function ensure(tk:Token):Void
 	{
-		var t = token();
-		if (t != tk)
-			unexpected(tk);
+		final t = token();
+		if (!t.equals(tk))
+			unexpected(t);
+	}
+
+	function maybe(tk:Token):Bool
+	{
+		final t = token();
+
+		if (tk.equals(t))
+			return true;
+
+		nextToken = t;
+
+		return false;
 	}
 
 	inline function readChar():Int
